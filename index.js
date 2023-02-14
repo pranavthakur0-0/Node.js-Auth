@@ -1,19 +1,19 @@
 const express = require("express");
 const cors = require("cors");
+const dotenv = require('dotenv')
 const  mongoose = require("mongoose");
 const authRoutes = require("./Routes/authroutes")
 const app = express();
 const cookieparser  = require("cookie-parser");
 
-
+dotenv.config({path : './config/config.env'});
 const connectdb = async ()=>
 {
     mongoose.set("strictQuery", false);
-    const conn = await mongoose.connect("mongodb+srv://pranav:mongopranav@media.ysikfpx.mongodb.net/jwttoken?");
+    const conn = await mongoose.connect(process.env.MONGO_URI,);
     console.log(`mongoos connected ${conn.connection.host}`);
 }
 connectdb();
-
 
 app.use(cors({
     origin:["http://localhost:3000"],
@@ -21,7 +21,6 @@ app.use(cors({
     credentials:true,
   })
 )
-
 
 app.use(cookieparser());
 app.use(express.json());
