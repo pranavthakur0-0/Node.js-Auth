@@ -1,7 +1,17 @@
 const User = require("../Models/usermodel")
 const jwt = require("jsonwebtoken");
 const dotenv = require('dotenv')
+const nodemailer = require('nodemailer');
 dotenv.config({path : './config/config.env'});
+
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_ID,
+      pass: process.env.EMAIL_PASSWORD,
+    }
+  });
 
 module.exports.checkuser = (req,res,next)=>
 {
@@ -13,19 +23,16 @@ module.exports.checkuser = (req,res,next)=>
             if(err)
             {       
                 res.json({status:false});
-                next();
             }
             else{
                 const user = await User.findById(decodedtoken.id);
                 if(user)res.json({status:true, user: user.email});
                 else res.json({status:false});
-                next();
             }
         })
     }
     else{
         res.json({status:false});
-        next();
     }
 }
 
@@ -38,7 +45,7 @@ module.exports.activation =(req,res,next)=>
             if(err)
             {
                 res.json({status:false});
-                next();
+        
             }
             else{
                 const user = await User.findById(decodedtoken.id);
@@ -57,3 +64,42 @@ module.exports.activation =(req,res,next)=>
         })
     }
 }
+
+module.exports.checkemail = async(req,res,next)=>{
+   
+    const {email} = req.body;  
+    if(email)
+    {
+        const user = await User.findOne({email: email})
+        if(user)
+        {
+           const payload = {
+            email : user.email,
+            id : user._id,
+           }
+           const token = jwt.sign(payload, process.env.SECRET_KEY, {expiresIn : '15m'})
+           const link = `http://localhost:3000/reset_password/${user.id}/${token}`
+           req.email = email;
+           req.link = link;
+           next();
+           return res.status(200).json({status : true, message : "Request Accepted"});
+        }
+    }
+   return res.status(400).json({status:false, message:"Invalid Email"});
+}
+
+module.exports.sendback = (req,res,next)=>{
+
+    const link = req.link;
+    try{
+        transporter.sendMail({
+            from : process.env.EMAIL_ID,
+            to: req.email,
+            subject: 'Password Reset',
+            html: `Please click this email to reset your passowrd: <a href="${link}">${link}</a>`,
+          });
+      }catch(err)
+      {
+            console.log(err);
+      }
+} 
